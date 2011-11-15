@@ -1,0 +1,19 @@
+#BlueJ class context
+comment0.params=args
+comment0.target=void\ main(String[])
+comment1.target=Connection\ connect()
+comment2.params=conn
+comment2.target=void\ createDB(Connection)
+comment3.params=conn
+comment3.target=void\ dropDB(Connection)
+comment4.params=conn
+comment4.target=void\ tableClear(Connection)
+comment5.params=conn
+comment5.target=void\ tablesFill(Connection)
+comment6.params=conn
+comment6.target=void\ setup(Connection)
+comment7.params=conn
+comment7.target=void\ loadCheck(Connection)
+comment8.params=conn
+comment8.target=String\ getStatus(Connection)
+numComments=9

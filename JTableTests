@@ -1,0 +1,67 @@
+String[] months = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+
+Object[][] tableData = ResDB.getRevenue(conn);
+
+JTable table = new JTable(tableData, months){
+       public boolean isCellEditable(int row, int column){
+       	      return false;
+	      }
+};
+
+
+contentScrollable.remove(1);
+contentScrollable.add(table);
+
+tableData = ResDB.getNumRes(conn);
+
+JTable table = new JTable(tableData, months){
+       public boolean isCellEditable(int row, int column){
+       	      return false;
+	      }
+};
+
+contentScrollable.remove(1);
+contentScrollable.add(table);
+
+
+
+
+String[] months = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+
+JRadioButton revenueButton = new JRadioButton("Revenue");
+revenueButton.addActionListener(new ActionListener(){
+				    public void actionPerformed(ActionEvent e)
+				    	   {
+					   	tableData = ResDB.getRevenue(conn);
+						table = new JTable(tableData, months){
+						      public boolean isCellEditable(int row, int column){ return false; }
+						}
+						contentScrollable.remove(1);
+						contentScrollable.add(table);
+					   }
+				    });
+
+
+JRadioButton numResButton = new JRadioButton("Reservations");
+numResButton.addActionListener(new ActionListener(){
+				    public void actionPerformed(ActionEvent e)
+				    	   {
+					   	tableData = ResDB.getNumRes(conn);
+						table = new JTable(tableData, months){
+						      public boolean isCellEditable(int row, int column){ return false; }
+						}
+						contentScrollable.remove(1);
+						contentScrollable.add(table);
+					   }
+				    });
+
+ButtonGroup group = new ButtonGroup();
+group.add(revenueButton);
+group.add(numResButton);
+
+revenueButton.setSelected(true);
+
+class BaseActionListener implements ActionListener
+{
+	
+}

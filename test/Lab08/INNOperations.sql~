@@ -1,0 +1,113 @@
+create or replace package INNOperations as
+
+    procedure Find_Cheapest(checkIn in date, checkOut in date, numPeople in binary_integer);
+
+    function fin_Occupancy(code in Rooms.RoomID%type, myDate in date) return varchar2;
+
+end;
+/
+
+create or replace package body INNOperations as
+
+    procedure Find_Cheapest(checkIn in date, checkOut in date, numPeople in binary_integer) is
+
+        counter binary_integer;
+        roomCount binary_integer;
+        duration binary_integer;
+        overallCost Rooms.basePrice%type;
+
+        cursor roo(starts in date, ends in date, numPeople in binary_integer) is
+            SELECT roomName, basePrice
+            FROM Rooms
+            WHERE maxOccupancy >= numPeople AND
+                  roomName IN ((SELECT roomName
+                                FROM Rooms) MINUS
+                                  (SELECT R.roomName
+                                   FROM Rooms R, Reservations RV
+                                   WHERE R.RoomID = RV.Room AND
+                                         ((RV.checkIn < starts AND RV.checkOut > ends) OR
+                                          (RV.checkIn >= starts AND RV.checkIn < ends) OR
+                                          (RV.checkOut > starts AND RV.checkOut <= ends))));
+        myRoom roo%rowtype;
+        minRoom roo%rowtype;
+
+    begin
+        dbms_output.enable;
+        dbms_output.put_line('Starting on ' || checkIn || ' and ending on ' || checkOut);
+        roomCount := 0;
+        duration := checkOut - checkIn;
+        open roo(checkIn, checkOut, numPeople);
+        loop
+            fetch roo into myRoom;
+            exit when roo%notfound;
+            if roomcount = 0 then
+                minRoom := myRoom;
+            else
+                if minRoom.basePrice > myRoom.basePrice then
+                    minRoom := myRoom;
+                end if;
+            end if;
+            roomCount := roomCount + 1;
+        end loop;
+        close roo;
+        if roomCount = 0 then
+            dbms_output.put_line('Sorry, no rooms available for these dates');
+        else
+            counter := 0;
+            overallCost := 0;
+            while counter<duration loop
+                overallCost := overallCost + minRoom.basePrice;
+                counter := counter + 1;
+            end loop;
+            open roo(checkIn, checkOut, numPeople);
+            loop
+                fetch roo into myRoom;
+                exit when roo%notfound;
+                if minRoom.basePrice = myRoom.basePrice then
+                    dbms_output.put_line(myRoom.roomName || ' at $' || myRoom.basePrice || ' per night or $' || overallCost || ' for the duration');
+                end if;
+            end loop;
+        end if;
+    end;
+
+    function fin_Occupancy(code in Rooms.RoomID%type, myDate in date) return varchar2 is
+
+        num double precision;
+
+        cursor ava(roomID in Rooms.RoomID%type, dates in date) is
+            SELECT COUNT(*) AS Occupied
+            FROM Reservations RV
+            WHERE RV.Room = roomID AND
+                  RV.CheckIn <= dates AND
+                  RV.CheckOut > dates;
+
+        cursor roo(code in Rooms.RoomID%type, num in double precision) is
+            SELECT TO_CHAR(R.basePrice * num) AS Status
+            FROM Rooms R
+            WHERE R.RoomID = code;
+
+        myStatus varchar2(30);
+        myOther roo%rowtype;
+        myAva ava%rowtype;
+
+    begin
+        num := 1.00;
+        if (myDate = '01-JAN-2010') OR (myDate = '04-JUL-2010') OR (myDate = '06-SEP-2010') OR (myDate = '30-OCT-2010') then
+            num := 1.25;
+        elsif TO_CHAR(myDate, 'DAY') = 'SAT' OR TO_CHAR(myDate, 'DAY') = 'SUN' then
+            num := 1.10;
+        end if;
+        open ava(code, myDate);
+        fetch ava into myAva;
+        if myAva.Occupied = 0 then
+            open roo(code, num);
+            fetch roo into myOther;
+            myStatus := myOther.Status;
+            close roo;
+            return myStatus;
+        else
+            return 'Occupied';
+        end if;
+    end;
+end;
+/

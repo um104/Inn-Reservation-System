@@ -1,0 +1,25 @@
+#BlueJ class context
+comment0.params=conn
+comment0.target=int\ exist(Connection)
+comment0.text=\nChecks\ to\ see\ if\ the\ Rooms\ table\ exists\n\n@param\ \ \ conn\ \ \ \ Connection\ to\ database\n@return\ \ \ \ \ \ positive\ if\ it\ exists,\ negative\ if\ it\ doesn't\ exist\n\n
+comment1.params=conn
+comment1.target=void\ clear(Connection)
+comment1.text=\ndeletes\ every\ tuple\ from\ the\ Rooms\ table\n\n@param\ \ \ conn\ \ \ \ Connection\ to\ DB\n\n
+comment2.params=conn
+comment2.target=void\ drop(Connection)
+comment2.text=\nCompletely\ drops\ the\ Rooms\ table\n\n@param\ \ \ conn\ \ \ \ Connection\ to\ DB\n\n
+comment3.params=conn
+comment3.target=void\ create(Connection)
+comment3.text=\nCreates\ the\ table,\ with\ the\ order\ of\ attributes\ being\:\ RoomID,\ RoomName,\ Beds,\ BedType,\ MaxOccupancy,\ BasePrice,\ Decor.\n\n@param\ \ \ conn\ \ \ \ Connection\ to\ database\n\n
+comment4.params=conn
+comment4.target=ArrayList<Room>\ getAll(Connection)
+comment4.text=\nGets\ all\ the\ info\ from\ all\ the\ rooms\n\n@param\ \ \ conn\ \ \ \ Connection\ to\ DB\n@return\ \ \ \ \ \ ArrayList\ of\ Rooms\ filled\ with\ all\ of\ the\ data\ for\ that\ Room\n\n
+comment5.params=result
+comment5.target=Room\ buildRoom(ResultSet)
+comment6.params=conn
+comment6.target=ArrayList<String>\ getList(Connection)
+comment6.text=\ncomment\n\n@return\ \ \ \ \ the\ list\ of\ roomnames\ \n\n
+comment7.params=conn\ roomID
+comment7.target=Room\ getDetail(Connection,\ String)
+comment7.text=\nCOMMENT\n\n@return\ the\ list\ of\ all\ information\ for\ each\ room\n\n
+numComments=8

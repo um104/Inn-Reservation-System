@@ -1,0 +1,34 @@
+CC = javac
+
+CFLAGS = -Xlint
+
+all: driver
+
+clean:
+	rm -f *.class
+
+test: all
+	java -cp ojdbc14.jar:. driver
+
+driver: driver.class gui.class InnReservations.class ResDB.class RoomDB.class Reservation.class Room.class
+
+driver.class: driver.java
+	$(CC) driver.java
+
+gui.class: gui.java 
+	$(CC) gui.java
+
+InnReservations.class: InnReservations.java
+	$(CC) InnReservations.java
+
+ResDB.class: ResDB.java
+	$(CC) ResDB.java
+
+RoomDB.class: RoomDB.java
+	$(CC) RoomDB.java
+
+Reservation.class: Reservation.java
+	$(CC) Reservation.java
+
+Room.class: Room.java
+	$(CC) Room.java

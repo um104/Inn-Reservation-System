@@ -1,0 +1,515 @@
+import java.sql.*;
+import java.util.*;
+import java.io.*;
+
+public class ResDB{
+
+    public static final long Weekend1 = 1262433600000L;
+    public static final long Weekend2 = 1262520000000L;
+    public static final long Week = 604800000L;
+    public static final int DAY = (24 * 60 * 60 * 1000);
+
+    /**
+     * Checks to see if the Reservations table exists
+     * 
+     * @param   conn    Connection to database
+     * @return      positive if it exists, negative if it doesn't exist
+     */
+    public static int exist(Connection conn){
+        try{
+            Statement s = conn.createStatement();
+            ResultSet result = s.executeQuery("SELECT COUNT(*) FROM Reservations");
+            boolean f = result.next();
+            return result.getInt(1);
+        }
+        catch(SQLException ex){
+            return -1;
+        }
+    }
+
+    /**
+     * Creates the table, with the order of attributes being: Code, Room, CheckIn, CheckOut, Rate, LastName, FirstName, Adults, Kids.
+     * 
+     * @param   conn    Connection to database
+     */
+    public static void create(Connection conn){
+        try{
+            Statement s = conn.createStatement();
+            String test = "CREATE TABLE Reservations ( Code INT PRIMARY KEY, ";
+            test = test + "Room CHAR(3) REFERENCES Rooms, CheckIn DATE, ";
+            test = test + "CheckOut DATE, Rate FLOAT, LastName VARCHAR2(15), ";
+            test = test + "Firstname VARCHAR2(15), Adults INT, Kids INT, ";
+            test = test + "UNIQUE (Room, CheckIn))";
+            s.executeUpdate(test);
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+    }
+
+    /**
+     * Deletes every tuple from the Reservations table
+     * 
+     * @param   conn    Connection to DB
+     */
+    public static void clear(Connection conn){
+        try{
+            Statement s = conn.createStatement();
+            s.executeUpdate("DELETE FROM Reservations");
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+    }
+
+    /**
+     * Completely drops the Reservations table
+     * 
+     * @param   conn    Connection to DB
+     */
+    public static void drop(Connection conn){
+        try{
+            Statement s = conn.createStatement();
+            s.executeUpdate("DROP TABLE Reservations");
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+    }
+
+    /**
+     * Gets all the info from all the reservations
+     * 
+     * @param   conn    Connection to DB
+     * @return      ArrayList of Reservations filled with all of the data for that Reservation
+     */
+    public static ArrayList<Reservation> getAll(Connection conn){
+        ArrayList<Reservation> reservations = new ArrayList<Reservation>();
+        try{
+            Statement s = conn.createStatement();
+            ResultSet result = s.executeQuery("SELECT * FROM Reservations");
+            boolean f = result.next();
+            while(f){
+                reservations.add(buildReservation(result));
+                f = result.next();
+            }
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+        return reservations;
+    }
+
+    /**
+     * Gets all the detail on a specific reservation, by code
+     * 
+     * @param   conn    Connection to DB
+     * @param   code    Unique code for that reservation
+     * @return      Returns the reservation information in a Reservation object
+     */
+    public static Reservation getDetail(Connection conn, int code){
+        Reservation detail = new Reservation();
+        try{
+            Statement s = conn.createStatement();
+            ResultSet result = s.executeQuery("SELECT * FROM Reservations RV WHERE RV.Code = " + code);
+            boolean f = result.next();
+            detail = buildReservation(result);
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+        return detail;
+    }
+
+    /**
+     * Gets the total revenue of the Inn, split by month and by room
+     * 
+     * @param   conn    Connection to DB
+     * @return      11x13 array of doubles, containing the revenues for specific month/rom combos, as well as the totals.
+     */
+    public static Object [][] getRevenue(Connection conn){
+        Object [][] result = new Object[11][14];
+        try{
+            Statement s = conn.createStatement();
+            ResultSet total = s.executeQuery("SELECT SUM(RV.Rate * (RV.CheckOut - RV.CheckIn)) AS Revenue FROM Reservations RV");
+            total.next();
+            result[10][13] = new Double(total.getDouble("Revenue"));
+            ResultSet roomTotals = s.executeQuery("SELECT RV.Room, SUM(RV.Rate * (RV.CheckOut - RV.CheckIn)) AS Revenue FROM Reservations RV GROUP BY RV.Room ORDER BY RV.Room");
+            int row = 0;
+            int col = 13;
+            boolean f = roomTotals.next();
+            while(f){
+                result[row][col] = new Double(roomTotals.getDouble("Revenue"));
+                row++;
+                f = roomTotals.next();
+            }
+            ResultSet monthTotals = s.executeQuery("SELECT TO_CHAR(RV.CheckIn, 'MM') AS Month, SUM(RV.Rate * (RV.CheckOut - RV.CheckIn)) AS Revenue FROM Reservations RV GROUP BY TO_CHAR(RV.CheckIn, 'MM') ORDER BY Month");
+            col = 1;
+            f = monthTotals.next();
+            while(f){
+                result[row][col] = new Double(monthTotals.getDouble("Revenue"));
+                col++;
+                f = monthTotals.next();
+            }
+            ResultSet grid = s.executeQuery("SELECT RV.Room, TO_CHAR(RV.CheckIn, 'MM') AS Month, SUM(RV.Rate * (RV.CheckOut - RV.CheckIn)) AS Revenue FROM Reservations RV GROUP BY RV.Room, TO_CHAR(RV.CheckIN, 'MM') ORDER BY RV.Room, Month");
+            row = 0;
+            col = 1;
+            f = grid.next();
+            while(f){
+                while(f && col < 13){
+                    result[row][col] = new Double(grid.getDouble("Revenue"));
+                    col++;
+                    f = grid.next();
+                }
+                col = 1;
+                row++;
+            }
+            result[0][0] = "AOB";
+            result[1][0] = "CAS";
+            result[2][0] = "FNA";
+            result[3][0] = "HBB";
+            result[4][0] = "IBD";
+            result[5][0] = "IBS";
+            result[6][0] = "MWC";
+            result[7][0] = "RND";
+            result[8][0] = "RTE";
+            result[9][0] = "TAA";
+            result[10][0] = "Total";
+        }
+        catch(Exception ex){
+            System.out.println(ex);
+        }
+        return result;
+    }
+
+    /**
+     * Similar to getRevenue, except it returns the number of Reservations by room, month.
+     */
+    public static Object [][] getNumRes(Connection conn){
+        Object [][] result = new Object[11][14];
+        try{
+            Statement s = conn.createStatement();
+            ResultSet total = s.executeQuery("SELECT COUNT(*) AS NumRes FROM Reservations RV");
+            total.next();
+            result[10][13] = new Double(total.getDouble("NumRes"));
+            ResultSet roomTotals = s.executeQuery("SELECT RV.Room, COUNT(*) AS NumRes FROM Reservations RV GROUP BY RV.Room ORDER BY RV.Room");
+            int row = 0;
+            int col = 13;
+            boolean f = roomTotals.next();
+            while(f){
+                result[row][col] = new Double(roomTotals.getDouble("NumRes"));
+                row++;
+                f = roomTotals.next();
+            }
+            ResultSet monthTotals = s.executeQuery("SELECT TO_CHAR(RV.CheckIn, 'MM') AS Month, COUNT(*) AS NumRes FROM Reservations RV GROUP BY TO_CHAR(RV.CheckIn, 'MM') ORDER BY Month");
+            col = 1;
+            f = monthTotals.next();
+            while(f){
+                result[row][col] = new Double(monthTotals.getInt("NumRes"));
+                col++;
+                f = monthTotals.next();
+            }
+            ResultSet grid = s.executeQuery("SELECT RV.Room, TO_CHAR(RV.CheckIn, 'MM') AS Month, COUNT(*) AS NumRes FROM Reservations RV GROUP BY RV.Room, TO_CHAR(RV.CheckIN, 'MM') ORDER BY RV.Room, Month");
+            row = 0;
+            col = 1;
+            f = grid.next();
+            while(f){
+                while(f && col < 13){
+                    result[row][col] = new Double(grid.getDouble("NumRes"));
+                    col++;
+                    f = grid.next();
+                }
+                col = 1;
+                row++;
+            }
+            result[0][0] = "AOB";
+            result[1][0] = "CAS";
+            result[2][0] = "FNA";
+            result[3][0] = "HBB";
+            result[4][0] = "IBD";
+            result[5][0] = "IBS";
+            result[6][0] = "MWC";
+            result[7][0] = "RND";
+            result[8][0] = "RTE";
+            result[9][0] = "TAA";
+            result[10][0] = "Total";
+        }
+        catch(Exception ex){
+            System.out.println(ex);
+        }
+        return result;
+    }
+
+    /**
+     * Checks which rooms are available on a given date.
+     * 
+     * @param   conn    Connection to DB
+     * @param   date    The specific date that we're checking for
+     * @return      Returns an int[] array of 10 elements, with the ith element referring to the ith room (ordered alpha).
+     *              If array[i] == 0, it's free. If array[i] == 1, it's occupied.
+     */
+    public static ArrayList<String> dateRes(Connection conn, String date)
+    {
+        ArrayList<String> retArray = new ArrayList<String>();
+        try {
+            Statement s = conn.createStatement();
+            Statement s1 = conn.createStatement();
+            ResultSet result1 = s1.executeQuery("SELECT RoomID FROM Rooms ORDRE BY Room");
+            boolean f = result1.next();
+            while(f){
+                retArray.add(result1.getString("RoomID"));
+                f = result1.next();
+            }
+            String query = "SELECT Room, COUNT(*) FROM Reservations ";
+            query += "WHERE CheckIn <= TO_DATE('" + date;
+            query += "', 'YYYY-MM-DD') AND CheckOut > TO_DATE('" + date;
+            query += "', 'YYYY-MM-DD') GROUP BY room ORDER BY room";
+            ResultSet result = s.executeQuery(query);
+            f = result.next();
+            while(f)
+            {
+                for(int i = 0; i < retArray.size(); i++){
+                    if(retArray.get(i).equals(result.getString("Room"))){
+                        if(result.getInt("COUNT(*)") > 0)
+                            retArray.set(i, retArray.get(i) + "     Occupied");
+                        else
+                            retArray.set(i, retArray.get(i) + "     Empty");
+                        break;
+                    }
+                }
+                f = result.next();
+            }
+        }
+        catch(Exception e)
+        {
+            System.out.println(e);
+        }
+        return retArray;
+    }
+
+
+    /**
+     * Returns a list of reservations for a specific room that occupy any night within the given date ranges
+     * 
+     * @param   conn    Connection to DB
+     * @param   Start   start date of range
+     * @param   End     end date of range
+     * @param   roomID  specific room we're checking
+     * @return      ArrayList of reservations
+     */
+    public static ArrayList<Reservation> dateRoomRes(Connection conn, java.sql.Date Start, java.sql.Date End, String roomID)
+    {
+        ArrayList<Reservation> retArray = new ArrayList<Reservation>();
+        try{
+            Statement s = conn.createStatement();
+            ResultSet result = s.executeQuery("SELECT * FROM Reservations WHERE room = '"+ roomID +"' AND ((CheckIn >= TO_DATE('" + Start + "', 'YYYY-MM-DD') AND checkin <= TO_DATE('" +End+ "', 'YYYY-MM-DD')) OR (CheckOut > TO_DATE('" +Start+ "', 'YYYY-MM-DD') AND CheckOut <= TO_DATE('" +End+ "', 'YYYY-MM-DD')) OR (Checkin <= TO_DATE('" +Start+ "', 'YYYY-MM-DD') AND CheckOut >= TO_DATE('" +End+ "', 'YYYY-MM-DD')))");
+            boolean f = result.next();
+            while(f)
+            {
+                retArray.add(buildReservation(result));
+                f = result.next();
+            }        
+        }
+        catch(SQLException e){
+            System.out.println(e);
+        }
+        return retArray;
+    }
+    
+    /**
+     * Builds a reservation based on a ResultSet, and returns that Reservation object filled in.
+     */
+    public static Reservation buildReservation(ResultSet result) throws SQLException
+    {
+        Reservation temp = new Reservation();
+        temp = new Reservation();
+        temp.code = result.getInt("code");
+        temp.room = result.getString("room");
+        temp.checkIn = result.getDate("checkIn");
+        temp.checkOut = result.getDate("checkOut");
+        temp.rate = result.getFloat("rate");
+        temp.lastName = result.getString("lastName");
+        temp.firstName = result.getString("firstName");
+        temp.adults = result.getInt("adults");
+        temp.kids = result.getInt("kids");
+        return temp;
+    }
+
+    /**
+     * Returns an ArrayList of reservations that COMMENCE within the range. SPECIFICALLY COMMENCE.
+     */
+    public static ArrayList<Reservation> intervalRes(Connection conn, java.sql.Date start, java.sql.Date end){
+        ArrayList<Reservation> interval = new ArrayList<Reservation>();
+        try{
+            Statement s = conn.createStatement();
+            ResultSet result = s.executeQuery("SELECT * FROM Reservations RV WHERE RV.CheckIn >= TO_DATE('" + start + "', 'YYYY-MM-DD') AND RV.CheckIN <= TO_DATE('" + end + "', 'YYYY-MM-DD') ORDER BY RV.CheckIn, RV.CheckOut");
+            boolean f = result.next();
+            while(f){
+                interval.add(buildReservation(result));
+                f = result.next();
+            }
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+        return interval;
+    }
+
+/**
+ * Checks the availability of a specific room between two dates, Start and End
+ * 
+ * @param   conn    Connection
+ * @param   start   Start date
+ * @param   end     End date
+ * @param   roomID  specific room we're checking the availability for
+ * @return      avail -1 is occupied, 0 is partially occupied, 1 is free
+ */
+    public static ArrayList<String> checkAvail(Connection conn, String start, String end){
+        ArrayList<String> avail = new ArrayList<String>();
+        try{
+            Statement s = conn.createStatement();
+            
+            // Union between table of reservations that start between Start and End, and...
+            String query = "(SELECT RV.Code, (RV.CheckOut - RV.CheckIN) AS Nights FROM Reservations RV WHERE RV.CheckIn >= TO_DATE('" + start + "', 'YYYY-MM-DD') AND CheckOut <= TO_DATE('" + end + "', 'YYYY-MM-DD'))";
+            // ...table of reservations where the startdate is between Start and End, and the end date is after End, and...
+            query = query + " UNION (SELECT RV.Code, (TO_DATE('" + end + "', 'YYYY-MM-DD') - RV.CheckIN) AS Nights FROM Reservations RV WHERE RV.CheckIn >= TO_DATE('" + start + "', 'YYYY-MM-DD') AND RV.CheckIN < TO_DATE('" + end + "', 'YYYY-MM-DD') AND CheckOut > TO_DATE('" + end + "', 'YYYY-MM-DD'))";
+            // ...table of reservations where the enddate is between Start and End, and the start date is before Start, and...
+            query = query + " UNION (SELECT RV.Code, (RV.CheckOut - TO_DATE('" + start + "', 'YYYY-MM-DD')) AS Nights FROM Reservations RV WHERE RV.CheckIN < TO_DATE('" + start + "', 'YYYY-MM-DD') AND CheckOut <= TO_DATE('" + end + "', 'YYYY-MM-DD') AND CheckOut > TO_DATE('" + start + "', 'YYYY-MM-DD'))";
+            // ...table of reservations where the startdate and enddate that are both on the outer ranges of Start and End.
+            query = query + " UNION (SELECT RV.Code, (TO_DATE('" + end + "', 'YYYY-MM-DD') - TO_DATE('" + start + "', 'YYYY-MM-DD')) AS Nights FROM Reservations RV WHERE RV.CheckIn < TO_DATE('" + start + "', 'YYYY-MM-DD') AND CheckOut > TO_DATE('" + end + "', 'YYYY-MM-DD'))";
+            
+            // Finally, get the sum of all those days
+            query = "SELECT RV.Room, SUM(R.Nights) AS Avail FROM Reservations RV, (" + query + ") R WHERE RV.Code = R.Code GROUP BY RV.Room ORDER BY RV.Room";
+            
+            //span is the number of days 
+            java.sql.Date st = java.sql.Date.valueOf(start);
+            java.sql.Date en = java.sql.Date.valueOf(end);
+            int span = (int)(en.getTime() - st.getTime() / DAY);
+            ResultSet result = s.executeQuery(query);
+            boolean f = result.next();
+            while(f){
+                String temp = result.getString("Room") + "     ";
+                if(result.getInt("Avail") == span){
+                    temp += "Fully Occupied";
+                }
+                else if(result.getInt("Avail") == 0){
+                    temp += "Partially Occupied";
+                }
+                else{
+                    temp += "Empty";
+                }
+                avail.add(temp);
+            }
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+        return avail;
+    }
+
+
+    /**
+     * Returns an ArrayList of Reservations for the specified room.
+     */
+    public static ArrayList<Reservation> roomRes(Connection conn, String roomID){
+        ArrayList<Reservation> interval = null;
+        try{
+            Statement s = conn.createStatement();
+            ResultSet result = s.executeQuery("SELECT * FROM Reservations RV WHERE RV.Room = '" + roomID + "' ORDER BY RV.CheckIn, RV.CheckOut");
+            interval = new ArrayList<Reservation> ();
+            boolean f = result.next();
+            while(f){
+                interval.add(buildReservation(result));
+                f = result.next();
+            }
+        }
+        catch(SQLException ex){
+            System.out.println(ex);
+        }
+        return interval;
+    }
+/**
+ * Private method for use in getRates(). Only useful for getting a single day's rate.
+ *
+ * @param   conn    Connection
+ * @param   date    The date that we're checking
+ * @param   roomID  The roomID of the room we're checking
+ * @return     The rate, modified for the specific date, of this room
+ */
+    public static double getRate(Connection conn, java.sql.Date date, String roomID)
+    {
+        double retVal = 0;
+        try{
+            Statement s = conn.createStatement();
+            
+            String query = "SELECT COUNT(*) FROM Reservations ";
+            query += "WHERE CheckIn <= TO_DATE('" + date;
+            query += "', 'YYYY-MM-DD') AND CheckOut > TO_DATE('" + date;
+            query += "', 'YYYY-MM-DD') AND Room = '" +roomID+"'";
+            
+            ResultSet result = s.executeQuery(query);
+            boolean f = result.next();
+            if(!(f))
+            { return 0; }
+            if(result.getInt("COUNT(*)") == 1)
+            {
+                return 0;
+            }
+            else if(result.getInt("COUNT(*)") == 0)
+            {
+                result = s.executeQuery("SELECT Baseprice from Rooms where roomID = '" + roomID + "'");
+                f = result.next();
+                if(!(f))
+                { return 0; }
+                retVal = result.getInt("BASEPRICE");
+                //Check specific 125% dates
+                if((date.equals(java.sql.Date.valueOf("2010-01-01"))) || (date.equals(java.sql.Date.valueOf("2010-07-4")))
+                || (date.equals(java.sql.Date.valueOf("2010-09-06"))) || (date.equals(java.sql.Date.valueOf("2010-10-30"))))
+                {
+                    retVal = retVal * 1.25;
+                    return retVal;
+                }
+                
+                //Check weekends
+                for(int i = 0; i < 52; i++)
+                {
+                    if(date.equals(new java.sql.Date(Weekend1 + (i*Week))) || date.equals(new java.sql.Date(Weekend2 + (i*Week))))
+                    {
+                        retVal = retVal * 1.1;
+                        return retVal;
+                    }
+                }
+            }
+            
+        }
+        catch(SQLException e)
+        {
+            System.out.println(e);
+        }
+        return retVal;
+    }
+    
+    /**
+     * Pulic method for getting the rates of the desired room from the Start date to the End date.
+     * Ordered by date. If an item in the array is 0, it means the room is occupied that day.
+     * It's the responsibility of the caller to know what days match up with what elements.
+     * 
+     * @param   conn    The connection between thsi program and the DB
+     * @param   start   The first date in the range.
+     * @param   end     The last date in the range.
+     * @param   roomID  The primary key of the room the user is looking at.
+     * @return      An integer array, with the ith element corresponding to the ith day in the range.
+     *              If array[i] = 0, the room is occupied on that day. Otherwise, array[i] will represent
+     *              the rate for the room on that date. Weekends and holidays are already accounted for.
+     */
+    public static double[] getRates(Connection conn, java.sql.Date start, java.sql.Date end, String roomID)
+    {
+        int days = (int)(end.getTime() - start.getTime()) / DAY;
+        double[] retArray = new double[days];
+        for(int i = 0; i < days; i++)
+        {
+            retArray[i] = getRate(conn, new java.sql.Date(start.getTime() + (i*DAY)), roomID);
+        }
+        return retArray;
+    }
+}

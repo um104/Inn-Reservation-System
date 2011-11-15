@@ -1,0 +1,45 @@
+Halli Meth   hmeth
+Mark Lerner  mlerner
+Michael Gage mgage
+CPE 365-01
+Spring 2011
+Lab 07
+
+Included is a Makefile for compiling and running the code.
+
+
+To compile the file:
+
+With the Makefile:
+    make all
+
+Without the Makefile:
+    javac InnReservations.java gui.java ResDB.java RoomDB.java Reservation.java Room.java
+
+To run the file:
+
+With the Makefile:
+    make run
+
+Without the Makefile
+    java -cp ojdbc14.jar:. InnReservations
+
+
+Notes:
+
+Please make sure a ServerSettings.txt file is in the directory.
+Please make sure the INN-insert.txt file is in the directory.
+ojdbc14.jar file is required for the make to complete.
+Due to the use of the Vector raw data type there are compiler warnings which may be ignored.
+
+
+The files should include:
+
+InnReservations.java
+gui.java
+ResDB.java
+RoomDB.java
+Reservation.java
+Room.java
+INN-insert.txt
+ojdbc14.jar

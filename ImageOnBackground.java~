@@ -1,0 +1,188 @@
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import javax.swing.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.sql.*;
+import java.util.*;
+
+public class ImageOnBackground {    
+    public static void runGUI(Connection conn) throws IOException{
+       /** Set up background images for Admin, Owner, and Guest
+        */
+        BufferedImage Adminimage = javax.imageio.ImageIO.read(new File("Graphics/mainview.png"));
+        BufferedImage Ownerimage = javax.imageio.ImageIO.read(new File("Graphics/owner.png"));
+        BufferedImage Guestimage = javax.imageio.ImageIO.read(new File("Graphics/guest.png"));    
+        
+        /** Set up background images panels for Admin, Owner, and Guest
+         * The panels contain the image itself and main menu mouse events associated with the image
+         * (mouse events only occur in admin)
+         * (view, mode of the program)
+        */
+        final ImageBackgroundPanel Admin = new ImageBackgroundPanel(Adminimage);
+        final ImageBackgroundPanel Owner = new ImageBackgroundPanel(Ownerimage);
+        final ImageBackgroundPanel Guest = new ImageBackgroundPanel(Guestimage);
+        
+        /** Add the panels for Admin, Owner, and Guest to the main frame
+        * When the mode is switched from Admin to something else in addComponents(),
+        * the Admin panel is removed and the other is added, and mode is changed
+        */
+        final JFrame MainFrame = new JFrame();
+        addComponents(MainFrame,Admin,Owner,Guest, conn);
+        MainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        MainFrame.add(new JScrollPane(Admin));
+        MainFrame.setSize(760,630);
+        MainFrame.setVisible(true);
+
+    }
+    
+    /** 
+     * Private Method that adds the components of the Admin Panel on startup
+     */
+    private static void addComponents(final JFrame MainFrame, final JPanel Admin, final JPanel Owner,final JPanel Guest, final Connection conn) {
+        // We are not using a predefined java layout for swing because we want to do abosolute
+        // positioning of text fields (for the main white content box)
+        Admin.setLayout(null);
+        //Creates a text area for the main content
+        final JTextArea content = new JTextArea();
+        content.setLineWrap(true);
+        content.setText("Hello and welcome to HMM Inn. Your number one choice for hotel management.\n\n" + InnReservations.getStatus(conn));
+        content.setEditable(false);
+        //Puts the text area into a scrollable region for large outputs
+        final JScrollPane contentScrollable = new JScrollPane(content);
+        contentScrollable.setLocation(204,80);
+        contentScrollable.setSize(530,494);
+        contentScrollable.setBorder(null);
+        // Adds the complete content region to the panel
+        Admin.add(contentScrollable);
+        
+        Admin.addMouseListener(new MouseAdapter(){
+            int mode = 0;
+            boolean contextExists = true;
+            public void mouseClicked(MouseEvent e) { 
+                int x = e.getX();
+                int y = e.getY();
+                if(mode == 0){
+                    if(x >= 360 && y >=37 && x <= 490 && y <= 55){
+                        content.setText("Welcome to the owner page.");
+                        mode = 1;
+                        MainFrame.getContentPane().remove(Admin);
+                        MainFrame.getContentPane().add(new JScrollPane(Owner));
+                        MainFrame.validate();
+                    }
+                    else if(x >= 511 && x <= 741 && y >= 37 && y <= 55){
+                        content.setText("Welcome to the guest page.");
+                        mode = 2;
+                        MainFrame.getContentPane().remove(Admin);
+                        MainFrame.getContentPane().add(new JScrollPane(Guest));
+                        MainFrame.validate();
+                    } 
+                    else if(x >= 9 && x <= 180 && y >= 72  && y <= 92){
+                        //AR-1
+                        content.setText(InnReservations.getStatus(conn)); 
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 116 && y <= 136){
+                        //AR-2
+                        ArrayList<Room> rooms = RoomDB.getAll(conn);
+                        String table = "List of Rooms\n-------------\nRoomID, RoomName, Beds, BedType, MaxOccupancy, BasePrice, Decor\n";
+                        for(int i = 0; i < rooms.size(); i++)
+                        {
+                            table += rooms.get(i).toString() + "\n";
+                        }
+                        content.setText(table); 
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 164 && y <= 184){
+                        //AR-2
+                        ArrayList<Reservation> res = ResDB.getAll(conn);
+                        String table = "List of Reservations\n------------------\nCode,  Room, CheckIn, CheckOut, Rate, LastName, FirstName, Adults, Kids\n";
+                        for(int i = 0; i < res.size(); i++)
+                        {
+                            table += res.get(i).toString() + "\n";
+                        }
+                        content.setText(table); 
+                        content.setCaretPosition(0);
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 210 && y <= 230){
+                        //AR-3
+                        InnReservations.tableClear(conn);
+                        content.setText("Databases Cleared.\n\n" + InnReservations.getStatus(conn)); 
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 256 && y <= 276){
+                        //AR-4
+                        if(RoomDB.exist(conn) >= 0 && ResDB.exist(conn) >= 0)
+                        {
+                            content.setText("Tables already exist and are populated.");
+                        }
+                        else
+                        {
+                            InnReservations.loadCheck(conn);
+                            content.setText("Databases Loaded.\n\n" + InnReservations.getStatus(conn)); 
+                        }
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 302 && y <= 322){
+                        //AR-5
+                        InnReservations.dropDB(conn);
+                        content.setText("Databases Dropped.\n\n" + InnReservations.getStatus(conn));
+                    }
+                }
+                else if(mode == 1){
+                    if(x >= 9 && x <= 180 && y >= 72  && y <= 92){
+                        //OR-1
+                        content.setText("MARK WRITE THE INSTRUCTIONS FOR THE OCCUPANCY STUFF");
+                        Occupancy O = new Occupancy(content, contentScrollable);
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 116 && y <= 136){
+                        //OR-2
+                        String[] months = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
+
+                        Object[][] tableData = ResDB.getRevenue(conn);
+                        
+                        JTable table = new JTable(tableData, months){
+                            public boolean isCellEditable(int row, int column){
+                                return false;
+                            }
+                        };
+                        
+                        contentScrollable.remove(content);
+                        contentScrollable.add(table);
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 164 && y <= 184){
+                        content.setText("Reservations..."); 
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 210 && y <= 230){
+                        content.setText("Rooms..."); 
+                    }
+                }
+                else{
+                    if(x >= 9 && x <= 180 && y >= 72  && y <= 92){
+                        content.setText("Rooms and Rates..."); 
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 116 && y <= 136){
+                        content.setText("Check Availability..."); 
+                    }
+                    else if(x >= 9 && x <= 180 && y >= 164 && y <= 184){
+                        content.setText("Reservations..."); 
+                    }
+                }
+            }
+        });
+    }
+}
+
+/**
+ * Class that sets up the background image for the Owner and Guest view
+ */
+class ImageBackgroundPanel extends JPanel {
+    BufferedImage image;
+    int mode = 0;
+
+    ImageBackgroundPanel(BufferedImage image) {
+        this.image = image;
+    }
+
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        g.drawImage(image, 0, 0, this);
+    }
+}

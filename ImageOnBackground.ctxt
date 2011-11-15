@@ -1,0 +1,7 @@
+#BlueJ class context
+comment0.params=conn
+comment0.target=void\ runGUI(Connection)
+comment1.params=MainFrame\ Admin\ Owner\ Guest\ conn
+comment1.target=void\ addComponents(JFrame,\ JPanel,\ JPanel,\ JPanel,\ Connection)
+comment1.text=\nPrivate\ Method\ that\ adds\ the\ components\ of\ the\ Admin\ Panel\ on\ startup\n\n
+numComments=2

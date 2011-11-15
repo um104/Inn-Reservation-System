@@ -1,0 +1,3 @@
+jdbc:oracle:thin:@hercules.csc.calpoly.edu:1522:ora10g
+team01
+abc123
